@@ -18,6 +18,7 @@ workspace/
 │       ├── cloudy/
 │       ├── rainy/
 │       └── snowy/
+├── models/                    # Local model weights
 ├── headmaster.db              # SQLite — model registry + embedding cache
 └── out/                       # Trained checkpoints
     ├── hotdog.pt
