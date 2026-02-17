@@ -1,0 +1,21 @@
+[build-system]
+requires = ["setuptools>=68.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "headmaster"
+version = "0.1.0"
+description = "Train classifier heads on vision model embeddings"
+requires-python = ">=3.10"
+dependencies = [
+    "torch>=2.0",
+    "transformers>=4.30",
+    "Pillow>=9.0",
+    "numpy>=1.24",
+]
+
+[project.scripts]
+headmaster = "headmaster.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
