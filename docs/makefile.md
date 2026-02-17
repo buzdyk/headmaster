@@ -62,6 +62,31 @@ Threshold:  0.42
 
 For multi-class heads, detail view shows per-class precision/recall/F1 instead of a single threshold.
 
+## Classification
+
+```
+make classify HEAD=hotdog SRC=./unsorted/
+make classify HEAD=hotdog SRC=./unsorted/ DEST=./results/
+```
+
+Runs a trained head against a flat directory of images. Embeds each image using the active model, classifies it, and copies files into bucket subdirectories. Output defaults to `classified/<head>/`, override with `DEST`.
+
+```
+classified/hotdog/          # or DEST if specified
+├── positive/
+│   ├── img001.jpg
+│   └── img005.jpg
+├── negative/
+│   ├── img002.jpg
+│   └── img003.jpg
+└── uncertain/
+    └── img004.jpg
+```
+
+For binary heads, images with scores within 0.1 of the threshold go to `uncertain/`. For multi-class heads, images where the top class confidence is below 0.5 go to `uncertain/`.
+
+Requires a trained checkpoint in `out/`. Source images are copied, not moved.
+
 ## Behavior
 
 - `make embed` skips images whose embeddings are already cached for the active model.
