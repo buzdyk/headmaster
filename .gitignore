@@ -1,1 +1,3 @@
-headmaster.db
+.venv/
+__pycache__/
+*.egg-info/

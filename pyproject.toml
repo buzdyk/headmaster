@@ -15,7 +15,7 @@ dependencies = [
 ]
 
 [project.scripts]
-headmaster = "headmaster.cli:main"
+hm = "headmaster.cli:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]

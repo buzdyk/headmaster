@@ -1,4 +1,5 @@
 import argparse
+import os
 import shutil
 import sys
 from pathlib import Path
@@ -8,9 +9,15 @@ import torch
 from headmaster import db
 from headmaster.heads import scan_head, scan_all_heads, validate_head
 
+DEFAULT_WORKSPACE = "workspace"
+
 
 def get_workspace() -> Path:
-    return Path.cwd()
+    ws = Path(os.environ.get("HEADMASTER_WORKSPACE", DEFAULT_WORKSPACE))
+    if not ws.is_absolute():
+        ws = Path.cwd() / ws
+    ws.mkdir(parents=True, exist_ok=True)
+    return ws
 
 
 def _require_active_model(ws: Path) -> dict:
@@ -213,9 +220,12 @@ def cmd_classify(args: argparse.Namespace) -> None:
     model.load_state_dict(ckpt["state_dict"])
     model.eval()
 
-    src_dir = Path(args.src)
+    if args.src:
+        src_dir = Path(args.src)
+    else:
+        src_dir = ws / "inbox" / args.head
     if not src_dir.is_dir():
-        raise SystemExit(f"error: source directory '{args.src}' not found")
+        raise SystemExit(f"error: source directory '{src_dir}' not found")
 
     dest_dir = Path(args.dest) if args.dest else ws / "classified" / args.head
     images = sorted(p for p in src_dir.iterdir() if p.is_file() and p.suffix.lower() in IMAGE_EXTS)
@@ -349,7 +359,7 @@ def build_parser() -> argparse.ArgumentParser:
     # classify
     p = sub.add_parser("classify")
     p.add_argument("--head", required=True)
-    p.add_argument("--src", required=True)
+    p.add_argument("--src", default=None)
     p.add_argument("--dest", default=None)
     p.set_defaults(func=cmd_classify)
 
