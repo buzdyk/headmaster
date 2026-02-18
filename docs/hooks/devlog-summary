@@ -73,12 +73,14 @@ ${SUMMARY}" 2>/dev/null || echo "Daily work log")
     NEW_ROW="| ${DATE_FULL} | [[${DATE_FILE}]] | ${SHORT_DESC_ESCAPED} |"
 
     awk -v new_row="$NEW_ROW" '
-        /^\| 20[0-9][0-9]-/ { last_entry_line = NR; last_entry = $0 }
+        /^\| 20[0-9][0-9]-/ { last_entry_line = NR }
+        /^\|---/ { separator_line = NR }
         { lines[NR] = $0 }
         END {
+            insert_after = last_entry_line ? last_entry_line : separator_line
             for (i = 1; i <= NR; i++) {
                 print lines[i]
-                if (i == last_entry_line) print new_row
+                if (i == insert_after) print new_row
             }
         }
     ' "$INDEX_FILE" > "${INDEX_FILE}.tmp" && mv "${INDEX_FILE}.tmp" "$INDEX_FILE"
