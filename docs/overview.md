@@ -1,6 +1,6 @@
 # Overview
 
-Headmaster trains classifier heads on vision model embeddings. You organize images into folders, run make, and get `.pt` checkpoints.
+Headmaster trains classifier heads on vision model embeddings. You organize images into folders, run `hm`, and get `.pt` checkpoints.
 
 ## Goals
 
@@ -8,7 +8,7 @@ Headmaster trains classifier heads on vision model embeddings. You organize imag
 - **Model-agnostic** — bring your own embedding model (CLIP, DINOv2, SigLIP, etc.)
 - **Embedding cache** — compute once per image per model (keyed by content hash), reuse across heads
 - **Both head types** — binary (sigmoid) and multi-class (softmax), determined by number of buckets
-- **Makefile-driven** — all operations are make targets
+- **CLI-driven** — all operations are `hm` subcommands (also available as `make` targets, see [Makefile](../Makefile))
 
 ## Non-Goals
 
@@ -30,9 +30,9 @@ heads/
 │   └── snowy/
 └── ...
 
-make embed                # compute embeddings for all images
-make train                # train all heads
-make train HEAD=hotdog      # train one head
+hm embed                  # compute embeddings for all images
+hm train                  # train all heads
+hm train --head hotdog    # train one head
 ```
 
 2 buckets → binary head (sigmoid, BCE loss, threshold optimization).

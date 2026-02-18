@@ -1,0 +1,4 @@
+#!/bin/bash
+
+# Post-commit hook - generate daily devlog summary
+exec "$(git rev-parse --show-toplevel)/scripts/devlog-summary"
