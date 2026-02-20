@@ -1,8 +1,7 @@
-PYTHON ?= python3
+.PHONY: sync
+sync:
+	uv sync
 
-.PHONY: venv
-venv:
-	$(PYTHON) -m venv .venv
-	.venv/bin/pip install -e .
-	@echo ""
-	@echo "Run: source .venv/bin/activate"
+.PHONY: check
+check:
+	uv run python -m pytest tests/

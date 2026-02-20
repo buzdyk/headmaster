@@ -4,8 +4,15 @@ Train classifier heads on vision model embeddings. Organize images into folders,
 
 ## Setup
 
+Requires [uv](https://docs.astral.sh/uv/).
+
 ```bash
-make venv
+uv sync
+```
+
+This creates a `.venv` and installs all dependencies. Run commands with `uv run hm ...` or activate the venv first:
+
+```bash
 source .venv/bin/activate
 ```
 

@@ -8,7 +8,7 @@ Headmaster trains classifier heads on vision model embeddings. You organize imag
 - **Model-agnostic** — bring your own embedding model (CLIP, DINOv2, SigLIP, etc.)
 - **Embedding cache** — compute once per image per model (keyed by content hash), reuse across heads
 - **Both head types** — binary (sigmoid) and multi-class (softmax), determined by number of buckets
-- **CLI-driven** — all operations are `hm` subcommands (also available as `make` targets, see [Makefile](../Makefile))
+- **CLI-driven** — all operations are `hm` subcommands, managed with [uv](https://docs.astral.sh/uv/)
 
 ## Non-Goals
 

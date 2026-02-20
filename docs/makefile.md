@@ -1,6 +1,6 @@
 # CLI Reference
 
-All operations are `hm` subcommands. Equivalent `make` targets are also available — see the [Makefile](../Makefile).
+All operations are `hm` subcommands. Install with `uv sync`, then run via `uv run hm <command>` or activate the venv first.
 
 ## Model Management
 
