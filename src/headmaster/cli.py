@@ -96,7 +96,7 @@ def cmd_embed(args: argparse.Namespace) -> None:
                 print(f"error: {e}")
             continue
         print(f"embedding head '{head.name}' ({head.total_images} images)")
-        embed_head(ws, head, model_info)
+        embed_head(ws, head, model_info, workers=args.workers)
         print(f"  done")
 
 
@@ -124,7 +124,7 @@ def cmd_train(args: argparse.Namespace) -> None:
             for e in errors:
                 print(f"error: {e}")
             continue
-        train_head(ws, head, model_info)
+        train_head(ws, head, model_info, workers=args.workers)
 
 
 # ── Status ──────────────────────────────────────────────────────
@@ -344,11 +344,13 @@ def build_parser() -> argparse.ArgumentParser:
     # embed
     p = sub.add_parser("embed")
     p.add_argument("--head", default=None)
+    p.add_argument("-j", "--workers", type=int, default=0)
     p.set_defaults(func=cmd_embed)
 
     # train
     p = sub.add_parser("train")
     p.add_argument("--head", default=None)
+    p.add_argument("-j", "--workers", type=int, default=0)
     p.set_defaults(func=cmd_train)
 
     # status

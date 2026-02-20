@@ -1,5 +1,6 @@
 import hashlib
 import struct
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 import numpy as np
@@ -18,6 +19,31 @@ def hash_file(path: Path) -> str:
     return h.hexdigest()
 
 
+def _hash_files(paths: list[Path], workers: int = 0) -> list[str]:
+    """Hash files with optional thread parallelism. Returns hashes in input order."""
+    if workers > 0:
+        with ThreadPoolExecutor(max_workers=workers) as pool:
+            return list(pool.map(hash_file, paths))
+    return [hash_file(p) for p in paths]
+
+
+def _load_and_preprocess(paths: list[Path], processor, workers: int = 0):
+    """Load and preprocess images with optional thread parallelism.
+
+    Returns processor output dict ready for the model.
+    """
+    def _open(p: Path):
+        return Image.open(p).convert("RGB")
+
+    if workers > 0:
+        with ThreadPoolExecutor(max_workers=workers) as pool:
+            images = list(pool.map(_open, paths))
+    else:
+        images = [_open(p) for p in paths]
+
+    return processor(images=images, return_tensors="pt"), images
+
+
 def serialize_vector(tensor: torch.Tensor) -> bytes:
     arr = tensor.detach().cpu().float().numpy()
     return arr.tobytes()
@@ -32,7 +58,7 @@ def _load_model(model_path: str):
     """Load a vision model and processor via transformers.
 
     Returns (model, processor, extract_fn) where extract_fn takes
-    model outputs and returns the embedding tensor.
+    a dict of inputs (already on device) and returns the embedding tensor.
     """
     from transformers import AutoModel, AutoProcessor, AutoConfig
 
@@ -44,14 +70,16 @@ def _load_model(model_path: str):
     model.eval()
 
     if "clip" in arch or "siglip" in arch:
-        def extract(outputs):
-            return outputs.image_embeds
+        def extract(inputs):
+            vision_out = model.vision_model(pixel_values=inputs["pixel_values"])
+            return model.visual_projection(vision_out.pooler_output)
     elif "dinov2" in arch or "vit" in arch:
-        def extract(outputs):
+        def extract(inputs):
+            outputs = model(**inputs)
             return outputs.last_hidden_state[:, 0]  # CLS token
     else:
-        def extract(outputs):
-            # Fallback: try pooler_output, then CLS token
+        def extract(inputs):
+            outputs = model(**inputs)
             if hasattr(outputs, "pooler_output") and outputs.pooler_output is not None:
                 return outputs.pooler_output
             return outputs.last_hidden_state[:, 0]
@@ -64,6 +92,7 @@ def embed_images(
     image_paths: list[Path],
     model_info: dict,
     batch_size: int = 32,
+    workers: int = 0,
 ) -> dict[str, torch.Tensor]:
     """Compute embeddings for images, using cache where possible.
 
@@ -73,9 +102,8 @@ def embed_images(
     embed_dim = model_info["embed_dim"]
 
     # Hash all images and check cache
-    path_to_hash: dict[Path, str] = {}
-    for p in image_paths:
-        path_to_hash[p] = hash_file(p)
+    hashes = _hash_files(image_paths, workers)
+    path_to_hash: dict[Path, str] = dict(zip(image_paths, hashes))
 
     cached_hashes = db.get_cached_hashes(workspace, model_id)
     uncached_paths = [p for p, h in path_to_hash.items() if h not in cached_hashes]
@@ -99,13 +127,11 @@ def embed_images(
 
     for i in range(0, len(uncached_paths), batch_size):
         batch_paths = uncached_paths[i : i + batch_size]
-        images = [Image.open(p).convert("RGB") for p in batch_paths]
+        inputs, _images = _load_and_preprocess(batch_paths, processor, workers)
 
         with torch.no_grad():
-            inputs = processor(images=images, return_tensors="pt")
             inputs = {k: v.to(device) for k, v in inputs.items()}
-            outputs = model(**inputs)
-            embeds = extract_fn(outputs)
+            embeds = extract_fn(inputs)
 
         for j, p in enumerate(batch_paths):
             h = path_to_hash[p]
@@ -116,9 +142,9 @@ def embed_images(
     return results
 
 
-def embed_head(workspace: Path, head: Head, model_info: dict) -> dict[str, torch.Tensor]:
+def embed_head(workspace: Path, head: Head, model_info: dict, workers: int = 0) -> dict[str, torch.Tensor]:
     """Embed all images in a head. Returns {hash: tensor}."""
     all_images = []
     for bucket in head.buckets:
         all_images.extend(bucket.images)
-    return embed_images(workspace, all_images, model_info)
+    return embed_images(workspace, all_images, model_info, workers=workers)

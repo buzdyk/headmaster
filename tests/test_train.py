@@ -18,7 +18,7 @@ from headmaster.train import (
 from tests.conftest import make_dummy_image
 
 
-def _mock_embed_head(workspace, head, model_info):
+def _mock_embed_head(workspace, head, model_info, workers=0):
     """Return fake embeddings keyed by file hash, using deterministic hashes."""
     from headmaster.embed import hash_file
 
@@ -124,7 +124,7 @@ class TestTrainHead:
         model_info = db.get_active_model(ws)
         head = scan_head(binary_head)
 
-        mock_embed.side_effect = lambda ws, h, mi: _mock_embed_head(ws, h, mi)
+        mock_embed.side_effect = lambda ws, h, mi, workers=0: _mock_embed_head(ws, h, mi)
 
         ckpt_path = train_head(ws, head, model_info, epochs=5)
 
@@ -149,7 +149,7 @@ class TestTrainHead:
         model_info = db.get_active_model(ws)
         head = scan_head(multiclass_head)
 
-        mock_embed.side_effect = lambda ws, h, mi: _mock_embed_head(ws, h, mi)
+        mock_embed.side_effect = lambda ws, h, mi, workers=0: _mock_embed_head(ws, h, mi)
 
         ckpt_path = train_head(ws, head, model_info, epochs=5)
 
@@ -166,7 +166,7 @@ class TestTrainHead:
         model_info = db.get_active_model(ws)
         head = scan_head(binary_head)
 
-        mock_embed.side_effect = lambda ws, h, mi: _mock_embed_head(ws, h, mi)
+        mock_embed.side_effect = lambda ws, h, mi, workers=0: _mock_embed_head(ws, h, mi)
 
         ckpt_path = train_head(ws, head, model_info, epochs=5)
         ckpt = torch.load(ckpt_path, map_location="cpu", weights_only=False)
@@ -185,7 +185,7 @@ class TestTrainHead:
         model_info = db.get_active_model(ws)
         head = scan_head(binary_head)
 
-        mock_embed.side_effect = lambda ws, h, mi: _mock_embed_head(ws, h, mi)
+        mock_embed.side_effect = lambda ws, h, mi, workers=0: _mock_embed_head(ws, h, mi)
 
         ckpt_path = train_head(ws, head, model_info, epochs=5)
         ckpt = torch.load(ckpt_path, map_location="cpu", weights_only=False)

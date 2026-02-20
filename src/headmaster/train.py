@@ -6,7 +6,7 @@ import torch.nn as nn
 from torch.utils.data import DataLoader, TensorDataset
 
 from headmaster import db
-from headmaster.embed import embed_head, hash_file, serialize_vector, deserialize_vector
+from headmaster.embed import embed_head, hash_file, _hash_files, serialize_vector, deserialize_vector
 from headmaster.heads import Head
 
 
@@ -28,7 +28,7 @@ class ClassifierHead(nn.Module):
 
 
 def _build_dataset(
-    workspace: Path, head: Head, model_info: dict
+    workspace: Path, head: Head, model_info: dict, workers: int = 0
 ) -> tuple[torch.Tensor, torch.Tensor, dict[str, list[str]]]:
     """Build feature matrix and label vector from a head.
 
@@ -37,15 +37,16 @@ def _build_dataset(
     classes = head.classes  # sorted alphabetically
     class_to_idx = {c: i for i, c in enumerate(classes)}
 
-    embeddings = embed_head(workspace, head, model_info)
+    embeddings = embed_head(workspace, head, model_info, workers=workers)
 
     xs, ys = [], []
     sources: dict[str, list[str]] = {c: [] for c in classes}
 
     for bucket in head.buckets:
         label = class_to_idx[bucket.name]
-        for img_path in bucket.images:
-            h = hash_file(img_path)
+        all_paths = list(bucket.images)
+        hashes = _hash_files(all_paths, workers)
+        for img_path, h in zip(all_paths, hashes):
             if h in embeddings:
                 xs.append(embeddings[h])
                 ys.append(label)
@@ -136,6 +137,7 @@ def train_head(
     epochs: int = 50,
     lr: float = 1e-3,
     batch_size: int = 64,
+    workers: int = 0,
 ) -> Path:
     """Train a classifier head and save checkpoint. Returns checkpoint path."""
     classes = head.classes
@@ -143,7 +145,7 @@ def train_head(
 
     print(f"training head '{head.name}' ({head.head_type}, {num_classes} classes)")
 
-    X, y, sources = _build_dataset(workspace, head, model_info)
+    X, y, sources = _build_dataset(workspace, head, model_info, workers=workers)
     X_train, y_train, X_val, y_val = _split(X, y)
 
     print(f"  train: {len(X_train)}, val: {len(X_val)}")

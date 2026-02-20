@@ -7,6 +7,8 @@ import torch
 from headmaster import db
 from headmaster.embed import (
     hash_file,
+    _hash_files,
+    _load_and_preprocess,
     serialize_vector,
     deserialize_vector,
     embed_images,
@@ -29,17 +31,9 @@ def _fake_load_model(model_path, embed_dim=64):
 
     processor.side_effect = fake_process
 
-    def fake_forward(**kwargs):
-        batch_size = kwargs["pixel_values"].shape[0]
-        outputs = MagicMock()
-        outputs.image_embeds = torch.randn(batch_size, embed_dim)
-        return outputs
-
-    model.__call__ = fake_forward
-    model.side_effect = fake_forward
-
-    def extract(outputs):
-        return outputs.image_embeds
+    def extract(inputs):
+        batch_size = inputs["pixel_values"].shape[0]
+        return torch.randn(batch_size, embed_dim)
 
     return model, processor, extract
 
@@ -152,3 +146,50 @@ class TestEmbedImages:
         results = embed_images(ws, [img1, img2], model_info)
         # Same content hash -> same entry
         assert len(results) == 1
+
+
+class TestHashFiles:
+    def test_sequential_matches_parallel(self, tmp_path):
+        paths = [make_dummy_image(tmp_path / f"img_{i}.jpg", color=(i, i, i)) for i in range(10)]
+        seq = _hash_files(paths, workers=0)
+        par = _hash_files(paths, workers=4)
+        assert seq == par
+
+    def test_order_preserved(self, tmp_path):
+        paths = [make_dummy_image(tmp_path / f"img_{i}.jpg", color=(i * 10, 0, 0)) for i in range(10)]
+        hashes = _hash_files(paths, workers=4)
+        for p, h in zip(paths, hashes):
+            assert h == hash_file(p)
+
+    def test_empty_list(self):
+        assert _hash_files([], workers=0) == []
+        assert _hash_files([], workers=4) == []
+
+
+class TestLoadAndPreprocess:
+    def test_sequential_matches_parallel(self, tmp_path):
+        paths = [make_dummy_image(tmp_path / f"img_{i}.jpg", color=(i, i, i)) for i in range(5)]
+        processor = MagicMock(side_effect=lambda images, return_tensors: {"pixel_values": torch.randn(len(images), 3, 32, 32)})
+
+        _load_and_preprocess(paths, processor, workers=0)
+        seq_images = processor.call_args[1]["images"] if processor.call_args[1] else processor.call_args[0][0]
+
+        processor.reset_mock()
+        _load_and_preprocess(paths, processor, workers=4)
+        par_images = processor.call_args[1]["images"] if processor.call_args[1] else processor.call_args[0][0]
+
+        assert len(seq_images) == len(par_images) == 5
+
+    def test_order_preserved(self, tmp_path):
+        colors = [(255, 0, 0), (0, 255, 0), (0, 0, 255)]
+        paths = [make_dummy_image(tmp_path / f"img_{i}.png", color=c, size=(4, 4)) for i, c in enumerate(colors)]
+
+        captured = {}
+        def fake_processor(images, return_tensors=None):
+            captured["images"] = images
+            return {"pixel_values": torch.randn(len(images), 3, 4, 4)}
+
+        _load_and_preprocess(paths, fake_processor, workers=3)
+        # First pixel of each image should match the color we created
+        for i, (img, color) in enumerate(zip(captured["images"], colors)):
+            assert img.getpixel((0, 0)) == color

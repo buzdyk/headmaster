@@ -112,7 +112,7 @@ class TestTrainCLI:
         head = scan_head(binary_head)
 
         from tests.test_train import _mock_embed_head
-        mock_embed.side_effect = lambda ws, h, mi: _mock_embed_head(ws, h, mi)
+        mock_embed.side_effect = lambda ws, h, mi, workers=0: _mock_embed_head(ws, h, mi)
 
         run_cli(["train", "--head", "hotdog"], ws)
         out = capsys.readouterr().out
