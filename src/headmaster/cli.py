@@ -124,7 +124,7 @@ def cmd_train(args: argparse.Namespace) -> None:
             for e in errors:
                 print(f"error: {e}")
             continue
-        train_head(ws, head, model_info, workers=args.workers)
+        train_head(ws, head, model_info, workers=args.workers, threshold=args.threshold)
 
 
 # ── Status ──────────────────────────────────────────────────────
@@ -351,6 +351,7 @@ def build_parser() -> argparse.ArgumentParser:
     p = sub.add_parser("train")
     p.add_argument("--head", default=None)
     p.add_argument("-j", "--workers", type=int, default=0)
+    p.add_argument("--threshold", type=float, default=None)
     p.set_defaults(func=cmd_train)
 
     # status

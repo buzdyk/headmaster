@@ -124,6 +124,7 @@ uv run hm embed --head hotdog      # compute embeddings for one head only
 
 uv run hm train                    # train all heads
 uv run hm train --head hotdog      # train one head
+uv run hm train --head hotdog --threshold 0.6  # override binary threshold
 
 uv run hm status                   # show all heads summary
 uv run hm status --head hotdog     # show one head in detail

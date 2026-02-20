@@ -189,8 +189,12 @@ def train_head(
 
     # Evaluate
     if head.head_type == "binary":
-        threshold, metrics = _sweep_threshold(model, X_val, y_val)
-        print(f"  threshold={threshold:.2f}  f1={metrics['f1']:.4f}")
+        swept_threshold, metrics = _sweep_threshold(model, X_val, y_val)
+        if threshold is not None:
+            print(f"  swept threshold={swept_threshold:.2f}  f1={metrics['f1']:.4f} (overridden to {threshold:.2f})")
+        else:
+            threshold = swept_threshold
+            print(f"  threshold={threshold:.2f}  f1={metrics['f1']:.4f}")
     else:
         metrics = _eval_multiclass(model, X_val, y_val, classes)
         print(f"  accuracy={metrics['accuracy']:.4f}")
@@ -202,9 +206,9 @@ def train_head(
 
     checkpoint = {
         "type": head.head_type,
-        "embed_dim": embed_dim,
+        "input_dim": embed_dim,
         "model": model_info["name"],
-        "state_dict": model.state_dict(),
+        "model_state_dict": model.state_dict(),
         "classes": classes,
         "sources": sources,
         "metadata": {
