@@ -57,7 +57,7 @@ CREATE TABLE models (
 );
 ```
 
-Exactly one model is `active` at a time. `hm embed` and `hm train` use the active model. Embeddings from inactive models are kept in cache (you can switch back without recomputing).
+Exactly one model is `active` at a time. `uv run hm embed` and `uv run hm train` use the active model. Embeddings from inactive models are kept in cache (you can switch back without recomputing).
 
 ### Embedding Cache
 
@@ -70,7 +70,7 @@ CREATE TABLE embeddings (
 );
 ```
 
-Keyed by content hash. Duplicate images across heads share one embedding per model. The cache is rebuildable — delete the DB and `hm embed` reconstructs it (models need to be re-registered).
+Keyed by content hash. Duplicate images across heads share one embedding per model. The cache is rebuildable — delete the DB and `uv run hm embed` reconstructs it (models need to be re-registered).
 
 ## Checkpoints
 

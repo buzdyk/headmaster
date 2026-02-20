@@ -30,9 +30,9 @@ heads/
 │   └── snowy/
 └── ...
 
-hm embed                  # compute embeddings for all images
-hm train                  # train all heads
-hm train --head hotdog    # train one head
+uv run hm embed                  # compute embeddings for all images
+uv run hm train                  # train all heads
+uv run hm train --head hotdog    # train one head
 ```
 
 2 buckets → binary head (sigmoid, BCE loss, threshold optimization).

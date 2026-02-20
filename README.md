@@ -1,6 +1,6 @@
 # Headmaster
 
-Train classifier heads on vision model embeddings. Organize images into folders, run `hm`, get `.pt` checkpoints.
+Train classifier heads on vision model embeddings. Organize images into folders, run `uv run hm`, get `.pt` checkpoints.
 
 ## Setup
 
@@ -10,34 +10,30 @@ Requires [uv](https://docs.astral.sh/uv/).
 uv sync
 ```
 
-This creates a `.venv` and installs all dependencies. Run commands with `uv run hm ...` or activate the venv first:
-
-```bash
-source .venv/bin/activate
-```
+All commands below use `uv run hm`.
 
 ## Quick Start
 
 ```bash
 # Register and activate an embedding model
-hm model-add --name clip-vit-l --path openai/clip-vit-large-patch14 --dim 768
-hm model-activate --name clip-vit-l
+uv run hm model-add --name clip-vit-l --path openai/clip-vit-large-patch14 --dim 768
+uv run hm model-activate --name clip-vit-l
 
 # Create a head — directory structure is the config
 mkdir -p workspace/heads/hotdog/{positive,negative}
 # Drop images into the buckets...
 
 # Embed and train
-hm embed
-hm train --head hotdog
+uv run hm embed
+uv run hm train --head hotdog
 
 # Check results
-hm status --head hotdog
+uv run hm status --head hotdog
 ```
 
 ## Models
 
-Any Hugging Face vision model that produces a fixed-size embedding vector works. Models download automatically on first `hm embed`. To pre-download:
+Any Hugging Face vision model that produces a fixed-size embedding vector works. Models download automatically on first `uv run hm embed`. To pre-download:
 
 ```bash
 huggingface-cli download openai/clip-vit-large-patch14
@@ -60,15 +56,15 @@ Cache size is the SQLite embedding storage per 1k images (dim × 4 bytes each). 
 ### Registration Examples
 
 ```bash
-hm model-add --name clip-vit-b  --path openai/clip-vit-base-patch32       --dim 512
-hm model-add --name clip-vit-l  --path openai/clip-vit-large-patch14      --dim 768
-hm model-add --name siglip-b    --path google/siglip-base-patch16-224     --dim 768
-hm model-add --name siglip-so   --path google/siglip-so400m-patch14-384   --dim 1152
-hm model-add --name dinov2-s    --path facebook/dinov2-small              --dim 384
-hm model-add --name dinov2-b    --path facebook/dinov2-base               --dim 768
-hm model-add --name dinov2-l    --path facebook/dinov2-large              --dim 1024
+uv run hm model-add --name clip-vit-b  --path openai/clip-vit-base-patch32       --dim 512
+uv run hm model-add --name clip-vit-l  --path openai/clip-vit-large-patch14      --dim 768
+uv run hm model-add --name siglip-b    --path google/siglip-base-patch16-224     --dim 768
+uv run hm model-add --name siglip-so   --path google/siglip-so400m-patch14-384   --dim 1152
+uv run hm model-add --name dinov2-s    --path facebook/dinov2-small              --dim 384
+uv run hm model-add --name dinov2-b    --path facebook/dinov2-base               --dim 768
+uv run hm model-add --name dinov2-l    --path facebook/dinov2-large              --dim 1024
 
-hm model-activate --name clip-vit-l
+uv run hm model-activate --name clip-vit-l
 ```
 
 ## Goals
@@ -113,9 +109,9 @@ The number of subdirectories is the entire configuration.
 ### Model Management
 
 ```bash
-hm model-list                    # show registered models
-hm model-activate --name dinov2-b  # switch active model
-hm model-remove --name dinov2-s    # remove model and its cached embeddings
+uv run hm model-list                    # show registered models
+uv run hm model-activate --name dinov2-b  # switch active model
+uv run hm model-remove --name dinov2-s    # remove model and its cached embeddings
 ```
 
 A model must be registered and activated before embedding or training (see [Models](#models) above). Removing a model deletes its cached embeddings.
@@ -123,21 +119,21 @@ A model must be registered and activated before embedding or training (see [Mode
 ### Embedding & Training
 
 ```bash
-hm embed                    # compute embeddings for all images (active model)
-hm embed --head hotdog      # compute embeddings for one head only
+uv run hm embed                    # compute embeddings for all images (active model)
+uv run hm embed --head hotdog      # compute embeddings for one head only
 
-hm train                    # train all heads
-hm train --head hotdog      # train one head
+uv run hm train                    # train all heads
+uv run hm train --head hotdog      # train one head
 
-hm status                   # show all heads summary
-hm status --head hotdog     # show one head in detail
+uv run hm status                   # show all heads summary
+uv run hm status --head hotdog     # show one head in detail
 ```
 
 ### Classification
 
 ```bash
-hm classify --head hotdog --src ./unsorted/
-hm classify --head hotdog --src ./unsorted/ --dest ./results/
+uv run hm classify --head hotdog --src ./unsorted/
+uv run hm classify --head hotdog --src ./unsorted/ --dest ./results/
 ```
 
 Runs a trained head against a flat directory of images. Embeds each image using the active model, classifies it, and copies files into bucket subdirectories. Output defaults to `classified/<head>/`, override with `--dest`.
@@ -159,9 +155,9 @@ For binary heads, images with scores within 0.1 of the threshold go to `uncertai
 ### Export & Cleanup
 
 ```bash
-hm export --dest /path/to/dir   # copy all checkpoints to target directory
-hm clean                        # remove all checkpoints
-hm clean --head hotdog           # remove one checkpoint
+uv run hm export --dest /path/to/dir   # copy all checkpoints to target directory
+uv run hm clean                        # remove all checkpoints
+uv run hm clean --head hotdog           # remove one checkpoint
 ```
 
 ## Heads
@@ -302,7 +298,7 @@ embed_dim → 256 (ReLU) → 128 (ReLU) → N (Softmax)
 ### Summary (no --head)
 
 ```
-$ hm status
+$ uv run hm status
 HEAD            TYPE        BUCKETS                          IMAGES  TRAINED  F1
 hotdog          binary      positive(45) negative(312)          357  yes      0.94
 weather         multiclass  cloudy(30) rainy(28) snowy(15)...   103  no       —
@@ -311,7 +307,7 @@ weather         multiclass  cloudy(30) rainy(28) snowy(15)...   103  no       �
 ### Detail (--head specified)
 
 ```
-$ hm status --head hotdog
+$ uv run hm status --head hotdog
 Head:       hotdog
 Type:       binary
 Model:      clip-vit-l
@@ -328,9 +324,9 @@ For multi-class heads, detail view shows per-class precision/recall/F1 instead o
 
 ## Behavior Notes
 
-- `hm embed` skips images whose embeddings are already cached for the active model.
-- `hm train` embeds first, then trains. Overwrites existing checkpoint in `out/`.
+- `uv run hm embed` skips images whose embeddings are already cached for the active model.
+- `uv run hm train` embeds first, then trains. Overwrites existing checkpoint in `out/`.
 - Head type (binary vs multi-class) is inferred from bucket count at train time. No configuration needed.
-- Switching models with `model-activate` doesn't invalidate anything. Old embeddings stay cached.
-- The embedding cache is rebuildable — delete the DB and `hm embed` reconstructs it (models need to be re-registered).
+- Switching models with `uv run hm model-activate` doesn't invalidate anything. Old embeddings stay cached.
+- The embedding cache is rebuildable — delete the DB and `uv run hm embed` reconstructs it (models need to be re-registered).
 - Set `HEADMASTER_WORKSPACE` to override the default workspace directory (`workspace`).
