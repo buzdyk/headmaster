@@ -163,9 +163,9 @@ class TestClassifyCLI:
         model = ClassifierHead(64, 2)
         ckpt = {
             "type": "binary",
-            "embed_dim": 64,
+            "input_dim": 64,
             "model": "test-model",
-            "state_dict": model.state_dict(),
+            "model_state_dict": model.state_dict(),
             "classes": ["negative", "positive"],
             "threshold": 0.5,
             "sources": {},
@@ -196,9 +196,9 @@ class TestClassifyCLI:
         model = ClassifierHead(64, 2)
         ckpt = {
             "type": "binary",
-            "embed_dim": 64,
+            "input_dim": 64,
             "model": "test-model",
-            "state_dict": model.state_dict(),
+            "model_state_dict": model.state_dict(),
             "classes": ["negative", "positive"],
             "threshold": 0.5,
             "sources": {},
@@ -229,9 +229,9 @@ class TestClassifyCLI:
         model = ClassifierHead(64, 2)
         ckpt = {
             "type": "binary",
-            "embed_dim": 64,
+            "input_dim": 64,
             "model": "test-model",
-            "state_dict": model.state_dict(),
+            "model_state_dict": model.state_dict(),
             "classes": ["negative", "positive"],
             "threshold": 0.5,
             "sources": {},

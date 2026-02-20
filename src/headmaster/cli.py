@@ -213,11 +213,11 @@ def cmd_classify(args: argparse.Namespace) -> None:
 
     ckpt = torch.load(ckpt_path, map_location="cpu", weights_only=False)
     classes = ckpt["classes"]
-    embed_dim = ckpt["embed_dim"]
+    embed_dim = ckpt["input_dim"]
     head_type = ckpt["type"]
 
     model = ClassifierHead(embed_dim, len(classes))
-    model.load_state_dict(ckpt["state_dict"])
+    model.load_state_dict(ckpt["model_state_dict"])
     model.eval()
 
     if args.src:

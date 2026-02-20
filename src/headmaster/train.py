@@ -15,16 +15,18 @@ class ClassifierHead(nn.Module):
         super().__init__()
         self.head_type = "binary" if num_classes == 2 else "multiclass"
         output_dim = 1 if num_classes == 2 else num_classes
-        self.net = nn.Sequential(
+        self.classifier = nn.Sequential(
             nn.Linear(embed_dim, 256),
             nn.ReLU(),
+            nn.Dropout(0.3),
             nn.Linear(256, 128),
             nn.ReLU(),
+            nn.Dropout(0.2),
             nn.Linear(128, output_dim),
         )
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        return self.net(x)
+        return self.classifier(x)
 
 
 def _build_dataset(
@@ -138,6 +140,7 @@ def train_head(
     lr: float = 1e-3,
     batch_size: int = 64,
     workers: int = 0,
+    threshold: float | None = None,
 ) -> Path:
     """Train a classifier head and save checkpoint. Returns checkpoint path."""
     classes = head.classes

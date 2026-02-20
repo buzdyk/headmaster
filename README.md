@@ -212,7 +212,7 @@ Both head types share the same MLP body, differing only in the output layer.
 
 **Binary head (2 buckets):**
 ```
-embed_dim → 256 (ReLU) → 128 (ReLU) → 1 (Sigmoid)
+input_dim → 256 (ReLU, Dropout 0.3) → 128 (ReLU, Dropout 0.2) → 1 (Sigmoid)
 ```
 - Loss: BCE, weighted by inverse class frequency
 - After training, sweep thresholds on validation set to maximize F1
@@ -220,7 +220,7 @@ embed_dim → 256 (ReLU) → 128 (ReLU) → 1 (Sigmoid)
 
 **Multi-class head (3+ buckets):**
 ```
-embed_dim → 256 (ReLU) → 128 (ReLU) → N (Softmax)
+input_dim → 256 (ReLU, Dropout 0.3) → 128 (ReLU, Dropout 0.2) → N (Softmax)
 ```
 - Loss: cross-entropy, weighted by inverse class frequency
 - Prediction is argmax of softmax output
@@ -252,9 +252,9 @@ embed_dim → 256 (ReLU) → 128 (ReLU) → N (Softmax)
 ```python
 {
     "type": "binary",
-    "embed_dim": int,
+    "input_dim": int,
     "model": str,
-    "state_dict": model.state_dict(),
+    "model_state_dict": model.state_dict(),
     "threshold": float,
     "classes": ["negative", "positive"],
     "sources": {
@@ -273,9 +273,9 @@ embed_dim → 256 (ReLU) → 128 (ReLU) → N (Softmax)
 ```python
 {
     "type": "multiclass",
-    "embed_dim": int,
+    "input_dim": int,
     "model": str,
-    "state_dict": model.state_dict(),
+    "model_state_dict": model.state_dict(),
     "classes": ["cloudy", "rainy", "snowy", "sunny"],
     "sources": {
         "cloudy":  ["weather/cloudy/img001.jpg", ...],
@@ -291,7 +291,7 @@ embed_dim → 256 (ReLU) → 128 (ReLU) → N (Softmax)
 }
 ```
 
-`embed_dim` and `classes` are sufficient to reconstruct the head architecture. `model` records which embedding model was used (the registry name, not the path). `sources` maps each class to image paths (relative to `heads/`) used at train time. Class names are sorted alphabetically for deterministic index mapping.
+`input_dim` and `classes` are sufficient to reconstruct the head architecture. `model` records which embedding model was used (the registry name, not the path). `sources` maps each class to image paths (relative to `heads/`) used at train time. Class names are sorted alphabetically for deterministic index mapping.
 
 ## Status Output
 

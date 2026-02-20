@@ -131,12 +131,12 @@ class TestTrainHead:
         assert ckpt_path.exists()
         ckpt = torch.load(ckpt_path, map_location="cpu", weights_only=False)
         assert ckpt["type"] == "binary"
-        assert ckpt["embed_dim"] == 64
+        assert ckpt["input_dim"] == 64
         assert ckpt["model"] == "test-model"
         assert "threshold" in ckpt
         assert 0.0 < ckpt["threshold"] < 1.0
         assert set(ckpt["classes"]) == {"positive", "negative"}
-        assert "state_dict" in ckpt
+        assert "model_state_dict" in ckpt
         assert "sources" in ckpt
         assert "metadata" in ckpt
         assert "metrics" in ckpt["metadata"]
@@ -191,10 +191,10 @@ class TestTrainHead:
         ckpt = torch.load(ckpt_path, map_location="cpu", weights_only=False)
 
         # Verify we can reconstruct the model from checkpoint
-        loaded = ClassifierHead(ckpt["embed_dim"], len(ckpt["classes"]))
-        loaded.load_state_dict(ckpt["state_dict"])
+        loaded = ClassifierHead(ckpt["input_dim"], len(ckpt["classes"]))
+        loaded.load_state_dict(ckpt["model_state_dict"])
         loaded.eval()
 
-        x = torch.randn(1, ckpt["embed_dim"])
+        x = torch.randn(1, ckpt["input_dim"])
         out = loaded(x)
         assert out.shape == (1, 1)  # binary
