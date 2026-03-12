@@ -149,6 +149,120 @@ class TestExportCLI:
         assert (dest / "hotdog.pt").exists()
 
 
+class TestConfusionMatrixCLI:
+    def _make_checkpoint(self, ws, head_name, num_classes, embed_dim=64):
+        classes = [f"class_{i}" for i in range(num_classes)]
+        model = ClassifierHead(embed_dim, num_classes)
+        ckpt = {
+            "type": "binary" if num_classes == 2 else "multiclass",
+            "input_dim": embed_dim,
+            "model": "test-model",
+            "model_state_dict": model.state_dict(),
+            "classes": classes,
+            "sources": {},
+            "metadata": {"head": head_name, "created_at": "2026-01-01", "metrics": {}},
+        }
+        if num_classes == 2:
+            ckpt["threshold"] = 0.5
+        torch.save(ckpt, ws / "out" / f"{head_name}.pt")
+        return classes
+
+    def _make_test_dir(self, base_dir, classes, per_class=5):
+        for cls in classes:
+            for i in range(per_class):
+                make_dummy_image(base_dir / cls / f"img_{i}.jpg", color=(i * 40, 0, 0))
+
+    def test_no_checkpoint(self, workspace_with_model):
+        with pytest.raises(SystemExit, match="no checkpoint"):
+            run_cli(["confusion-matrix", "--head", "hotdog"], workspace_with_model)
+
+    def test_no_test_dir(self, workspace_with_model):
+        ws = workspace_with_model
+        self._make_checkpoint(ws, "hotdog", 2)
+        with pytest.raises(SystemExit, match="test directory"):
+            run_cli(["confusion-matrix", "--head", "hotdog"], ws)
+
+    def test_no_test_images(self, workspace_with_model):
+        ws = workspace_with_model
+        classes = self._make_checkpoint(ws, "hotdog", 2)
+        # Create empty class dirs
+        for cls in classes:
+            (ws / "test" / "hotdog" / cls).mkdir(parents=True)
+        with pytest.raises(SystemExit, match="no test images"):
+            run_cli(["confusion-matrix", "--head", "hotdog"], ws)
+
+    @patch("headmaster.embed.embed_images")
+    def test_binary_default_test_dir(self, mock_embed, workspace_with_model, capsys):
+        ws = workspace_with_model
+        classes = self._make_checkpoint(ws, "hotdog", 2)
+        test_dir = ws / "test" / "hotdog"
+        self._make_test_dir(test_dir, classes)
+
+        from headmaster.embed import hash_file
+        def fake_embed(ws, images, model_info):
+            return {hash_file(p): torch.randn(64) for p in images}
+        mock_embed.side_effect = fake_embed
+
+        run_cli(["confusion-matrix", "--head", "hotdog"], ws)
+        out = capsys.readouterr().out
+        assert "Accuracy:" in out
+        assert "hotdog" in out
+
+    @patch("headmaster.embed.embed_images")
+    def test_custom_test_dir(self, mock_embed, workspace_with_model, capsys):
+        ws = workspace_with_model
+        classes = self._make_checkpoint(ws, "hotdog", 2)
+        custom_dir = ws / "my_tests"
+        self._make_test_dir(custom_dir, classes)
+
+        from headmaster.embed import hash_file
+        def fake_embed(ws, images, model_info):
+            return {hash_file(p): torch.randn(64) for p in images}
+        mock_embed.side_effect = fake_embed
+
+        run_cli(["confusion-matrix", "--head", "hotdog", "--test-dir", str(custom_dir)], ws)
+        out = capsys.readouterr().out
+        assert "Accuracy:" in out
+
+    @patch("headmaster.embed.embed_images")
+    def test_multiclass(self, mock_embed, workspace_with_model, capsys):
+        ws = workspace_with_model
+        classes = self._make_checkpoint(ws, "weather", 3)
+        test_dir = ws / "test" / "weather"
+        self._make_test_dir(test_dir, classes)
+
+        from headmaster.embed import hash_file
+        def fake_embed(ws, images, model_info):
+            return {hash_file(p): torch.randn(64) for p in images}
+        mock_embed.side_effect = fake_embed
+
+        run_cli(["confusion-matrix", "--head", "weather"], ws)
+        out = capsys.readouterr().out
+        assert "Accuracy:" in out
+        # All 3 classes should appear in the table
+        for cls in classes:
+            assert cls in out
+
+    @patch("headmaster.embed.embed_images")
+    def test_extended_output(self, mock_embed, workspace_with_model, capsys):
+        ws = workspace_with_model
+        classes = self._make_checkpoint(ws, "hotdog", 2)
+        test_dir = ws / "test" / "hotdog"
+        self._make_test_dir(test_dir, classes)
+
+        from headmaster.embed import hash_file
+        def fake_embed(ws, images, model_info):
+            return {hash_file(p): torch.randn(64) for p in images}
+        mock_embed.side_effect = fake_embed
+
+        run_cli(["confusion-matrix", "--head", "hotdog", "--extended"], ws)
+        out = capsys.readouterr().out
+        assert "Accuracy:" in out
+        # Extended output should contain image paths and labels
+        assert ".jpg" in out
+        assert any(label in out for label in ["[CORRECT]", "[WRONG]"])
+
+
 class TestClassifyCLI:
     def test_classify_no_checkpoint(self, workspace_with_model):
         with pytest.raises(SystemExit, match="no checkpoint"):

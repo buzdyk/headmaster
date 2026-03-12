@@ -273,6 +273,122 @@ def cmd_classify(args: argparse.Namespace) -> None:
     print(f"  results in {dest_dir}")
 
 
+# ── Confusion Matrix ───────────────────────────────────────────
+
+
+def cmd_confusion_matrix(args: argparse.Namespace) -> None:
+    from headmaster.embed import embed_images, hash_file
+    from headmaster.train import ClassifierHead
+    from headmaster.heads import IMAGE_EXTS
+
+    ws = get_workspace()
+    db.init_db(ws)
+    model_info = _require_active_model(ws)
+
+    ckpt_path = ws / "out" / f"{args.head}.pt"
+    if not ckpt_path.exists():
+        raise SystemExit(f"error: no checkpoint for head '{args.head}' — run train first")
+
+    ckpt = torch.load(ckpt_path, map_location="cpu", weights_only=False)
+    classes = ckpt["classes"]
+    head_type = ckpt["type"]
+    threshold = ckpt.get("threshold", 0.5)
+
+    classifier = ClassifierHead(ckpt["input_dim"], len(classes))
+    classifier.load_state_dict(ckpt["model_state_dict"])
+    classifier.eval()
+
+    test_dir = Path(args.test_dir) if args.test_dir else ws / "test" / args.head
+    if not test_dir.is_dir():
+        raise SystemExit(f"error: test directory '{test_dir}' not found")
+
+    # Collect images per class subdirectory
+    class_images: dict[str, list[Path]] = {}
+    for cls in classes:
+        cls_dir = test_dir / cls
+        if not cls_dir.is_dir():
+            continue
+        imgs = sorted(p for p in cls_dir.iterdir() if p.is_file() and p.suffix.lower() in IMAGE_EXTS)
+        if imgs:
+            class_images[cls] = imgs
+
+    if not class_images:
+        raise SystemExit(f"error: no test images found in '{test_dir}' — expected subdirs: {', '.join(classes)}")
+
+    # Embed all test images at once
+    all_images = [img for imgs in class_images.values() for img in imgs]
+    embeddings = embed_images(ws, all_images, model_info)
+
+    # Build confusion matrix
+    matrix: dict[tuple[str, str], int] = {}
+    matrix_paths: dict[tuple[str, str], list[Path]] = {}
+    for actual_cls, imgs in class_images.items():
+        for img_path in imgs:
+            h = hash_file(img_path)
+            if h not in embeddings:
+                continue
+            vec = embeddings[h].unsqueeze(0)
+            with torch.no_grad():
+                out = classifier(vec)
+            if head_type == "binary":
+                prob = torch.sigmoid(out).item()
+                pred_idx = 1 if prob >= threshold else 0
+            else:
+                pred_idx = torch.softmax(out, dim=1).argmax(dim=1).item()
+            pred_cls = classes[pred_idx]
+            key = (actual_cls, pred_cls)
+            matrix[key] = matrix.get(key, 0) + 1
+            matrix_paths.setdefault(key, []).append(img_path)
+
+    # Print
+    _print_confusion_matrix(matrix, classes, args.head)
+    if args.extended:
+        _print_extended(matrix_paths, classes)
+
+
+def _print_confusion_matrix(matrix: dict, classes: list[str], head_name: str) -> None:
+    label_w = max(len(f"Actual {c}") for c in classes) + 2
+    col_w = max(len(c) for c in classes) + 2
+
+    print(f"\n  {head_name}")
+    print(f"{'':>{label_w}}", end="")
+    for c in classes:
+        print(f"  {'Pred ' + c:>{col_w + 5}}", end="")
+    print(f"  {'Total':>6}")
+    print("-" * (label_w + (col_w + 7) * len(classes) + 8))
+
+    total_correct = 0
+    total_all = 0
+    for actual in classes:
+        print(f"{'Actual ' + actual:>{label_w}}", end="")
+        row_total = sum(matrix.get((actual, pred), 0) for pred in classes)
+        for pred in classes:
+            count = matrix.get((actual, pred), 0)
+            if actual == pred:
+                total_correct += count
+            total_all += count
+            print(f"  {count:>{col_w + 5}}", end="")
+        print(f"  {row_total:>6}")
+
+    print("-" * (label_w + (col_w + 7) * len(classes) + 8))
+    if total_all > 0:
+        print(f"  Accuracy: {total_correct}/{total_all} ({total_correct / total_all:.1%})")
+    print()
+
+
+def _print_extended(matrix_paths: dict, classes: list[str]) -> None:
+    for actual in classes:
+        for pred in classes:
+            paths = matrix_paths.get((actual, pred), [])
+            if not paths:
+                continue
+            label = "CORRECT" if actual == pred else "WRONG"
+            print(f"  [{label}] actual={actual} pred={pred} ({len(paths)})")
+            for p in paths:
+                print(f"    {p}")
+            print()
+
+
 # ── Export & Clean ──────────────────────────────────────────────
 
 
@@ -365,6 +481,13 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--src", default=None)
     p.add_argument("--dest", default=None)
     p.set_defaults(func=cmd_classify)
+
+    # confusion-matrix
+    p = sub.add_parser("confusion-matrix")
+    p.add_argument("--head", required=True)
+    p.add_argument("--test-dir", default=None)
+    p.add_argument("--extended", action="store_true", help="Print image paths for each cell")
+    p.set_defaults(func=cmd_confusion_matrix)
 
     # export
     p = sub.add_parser("export")
