@@ -6,19 +6,21 @@ date: 2026-02-20
 
 ## Summary
 
-**Build & Dependencies**
+**Build & Tooling**
 - Migrated from venv/Makefile to uv
 - Added uv.lock with resolved dependencies
 
-**Concurrency**
+**Training**
+- Added dropout layers to binary head
+- Renamed checkpoint keys for clarity
+- Added --threshold override for training CLI
+
+**Embedding**
 - Added threaded workers for embedding and hashing
-- Created todo for parallel embedding workers
 
 **Docs**
-- Updated all docs to use `uv run hm`
-
-**Repo Hygiene**
-- Replaced .gitkeep with .gitignore in workspace dirs
+- Standardized `uv run hm` usage across all docs
+- Tracked parallel embedding workers in todos
 
 ## Commits
 
@@ -28,3 +30,6 @@ date: 2026-02-20
 - 9af27ee Add uv.lock with resolved project dependencies
 - 944acde Add todo for parallel embedding workers
 - fe16d34 Use `uv run hm` consistently in all docs
+- 25c4ff8 cleanup, bump devlog
+- da05f51 Add dropout layers and rename checkpoint keys
+- 914b1b9 Add --threshold override for binary head training
