@@ -19,3 +19,8 @@ hm = "headmaster.cli:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[dependency-groups]
+dev = [
+    "matplotlib>=3.10.8",
+]
