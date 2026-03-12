@@ -1,6 +1,6 @@
 # Headmaster
 
-Train classifier heads on vision model embeddings. Organize images into folders, run `uv run hm`, get `.pt` checkpoints.
+Train classifier heads on vision model embeddings. Organize images into folders, run `uv run hm`, get `.pt` checkpoints. See [Classifying Evangelion with Foundation Models](https://buzdyk.dev/blog/classifying-content/) for background and practical examples.
 
 ## Setup
 
@@ -92,6 +92,10 @@ workspace/
 │       ├── cloudy/
 │       ├── rainy/
 │       └── snowy/
+├── test/                      # Test sets for confusion-matrix
+│   └── hotdog/
+│       ├── positive/
+│       └── negative/
 ├── headmaster.db              # SQLite — model registry + embedding cache
 ├── models/
 └── out/                       # Trained checkpoints
@@ -152,6 +156,42 @@ classified/hotdog/
 ```
 
 For binary heads, images with scores within 0.1 of the threshold go to `uncertain/`. For multi-class heads, images where the top class confidence is below 0.5 go to `uncertain/`.
+
+### Confusion Matrix
+
+```bash
+uv run hm confusion-matrix --head hotdog
+uv run hm confusion-matrix --head hotdog --test-dir ./my_test_set/
+uv run hm confusion-matrix --head hotdog --extended
+```
+
+Evaluates a trained head against a labeled test set. Test data is organized the same way as training data — one subdirectory per class, images inside:
+
+```
+workspace/test/hotdog/
+├── positive/
+│   ├── img001.jpg
+│   └── img002.jpg
+└── negative/
+    ├── img003.jpg
+    └── img004.jpg
+```
+
+Defaults to `workspace/test/<head_name>/`, override with `--test-dir`. Subdirectory names must match the class names in the checkpoint.
+
+Output is a confusion matrix with accuracy:
+
+```
+  hotdog
+                  Pred negative  Pred positive   Total
+------------------------------------------------------
+Actual negative             29              3      32
+Actual positive              2             41      43
+------------------------------------------------------
+  Accuracy: 70/75 (93.3%)
+```
+
+For binary heads, the threshold from training (F1-optimized) is used. `--extended` prints the file path for every image, grouped by actual/predicted class and labeled `[CORRECT]`/`[WRONG]`.
 
 ### Export & Cleanup
 
